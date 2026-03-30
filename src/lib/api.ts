@@ -77,6 +77,10 @@ export const api = {
   // Host
   getHostStats: () => request('/host/stats'),
 
+  // Subscriptions
+  purchaseSubscription: (plan: string) =>
+    request('/subscriptions', { method: 'POST', body: JSON.stringify({ plan }) }),
+
   // Admin
   getAdminUsers: () => request('/admin/users'),
   updateAdminUser: (id: string, data: Record<string, unknown>) =>

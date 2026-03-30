@@ -35,16 +35,16 @@ const plans: Plan[] = [
     name: 'Standart',
     price: 0,
     period: 'ay',
-    description: 'Temel ev sahipligi ozellikleri',
+    description: 'Temel ev sahipliği özellikleri',
     features: [
-      { text: 'Aylik 3 ilan yayinlama hakki', included: true },
-      { text: 'Standart arama sonuclarinda gorunme', included: true },
+      { text: 'Aylık 3 ilan yayınlama hakkı', included: true },
+      { text: 'Standart arama sonuçlarında görünme', included: true },
       { text: 'Temel istatistikler', included: true },
-      { text: 'E-posta destegi', included: true },
-      { text: 'One cikan ilanlar (aylik 5 hak)', included: false },
-      { text: 'Sinirsiz ilan yayinlama', included: false },
-      { text: 'Oncelikli musteri destegi', included: false },
-      { text: 'Detayli performans raporlari', included: false },
+      { text: 'E-posta desteği', included: true },
+      { text: 'Öne çıkan ilanlar', included: false },
+      { text: 'Sınırsız ilan yayınlama', included: false },
+      { text: 'Öncelikli müşteri desteği', included: false },
+      { text: 'Detaylı performans raporları', included: false },
     ],
   },
   {
@@ -52,17 +52,17 @@ const plans: Plan[] = [
     name: 'Premium',
     price: 499.99,
     period: 'ay',
-    description: 'Tum ozellikler, sinirsiz ilan, one cikarma hakki',
+    description: 'Tüm özellikler, sınırsız ilan, öne çıkarma hakkı',
     popular: true,
     features: [
-      { text: 'Sinirsiz ilan yayinlama', included: true },
-      { text: 'Aylik 5 one cikarma hakki', included: true },
-      { text: 'Yuksek gorunurluk ve oncelik', included: true },
-      { text: 'Detayli istatistikler ve analizler', included: true },
-      { text: 'Oncelikli musteri destegi', included: true },
-      { text: '7/24 telefon destegi', included: true },
-      { text: 'Ozel performans raporlari', included: true },
-      { text: 'Tum eklentilere erisim', included: true },
+      { text: 'Sınırsız ilan yayınlama', included: true },
+      { text: 'Aylık 5 öne çıkarma hakkı', included: true },
+      { text: 'Yüksek görünürlük ve öncelik', included: true },
+      { text: 'Detaylı istatistikler ve analizler', included: true },
+      { text: 'Öncelikli müşteri desteği', included: true },
+      { text: '7/24 telefon desteği', included: true },
+      { text: 'Özel performans raporları', included: true },
+      { text: 'Tüm eklentilere erişim', included: true },
     ],
   },
 ];
@@ -70,41 +70,89 @@ const plans: Plan[] = [
 export default function SubscriptionPage() {
   const router = useRouter();
   const { user, isLoading: authLoading, loadFromStorage, setAuth, logout } = useAuthStore();
-  const [subscribing, setSubscribing] = useState<string | null>(null);
-  const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
 
-  useEffect(() => {
-    loadFromStorage();
-  }, [loadFromStorage]);
+  // Payment modal state
+  const [payingPlan, setPayingPlan] = useState<Plan | null>(null);
+  const [cardName, setCardName] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [cvv, setCvv] = useState('');
+  const [formError, setFormError] = useState('');
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+
+  useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user || user.role !== 'host') {
-      router.push('/giris');
-    }
+    if (!user || user.role !== 'host') router.push('/giris');
   }, [user, authLoading, router]);
 
-  const handleSubscribe = async (planId: string) => {
+  const formatCardNumber = (value: string) => {
+    const cleaned = value.replace(/\D/g, '').slice(0, 16);
+    return cleaned.replace(/(.{4})/g, '$1 ').trim();
+  };
+
+  const formatExpiry = (value: string) => {
+    const cleaned = value.replace(/\D/g, '').slice(0, 4);
+    if (cleaned.length >= 3) return `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
+    return cleaned;
+  };
+
+  const openPayment = (plan: Plan) => {
+    setPayingPlan(plan);
+    setCardName('');
+    setCardNumber('');
+    setExpiry('');
+    setCvv('');
+    setFormError('');
+    setPaymentSuccess(false);
+  };
+
+  const handleDowngrade = async () => {
     if (!user) return;
-    setSubscribing(planId);
-    setError('');
-    setSuccess('');
+    if (!confirm('Standart plana geçmek istediğinizden emin misiniz?')) return;
+    try {
+      const data = await api.purchaseSubscription('basic');
+      const token = localStorage.getItem('token') || '';
+      setAuth({ ...user, subscriptionPlan: 'basic' }, token);
+      void data;
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Hata oluştu');
+    }
+  };
+
+  const handlePayment = async () => {
+    if (!payingPlan || !user) return;
+
+    if (!cardName.trim() || !cardNumber.trim() || !expiry.trim() || !cvv.trim()) {
+      setFormError('Lütfen tüm ödeme bilgilerini doldurun.');
+      return;
+    }
+    if (cardNumber.replace(/\s/g, '').length < 16) {
+      setFormError('Geçerli bir kart numarası girin.');
+      return;
+    }
+    if (cvv.length < 3) {
+      setFormError('Geçerli bir CVV girin.');
+      return;
+    }
+
+    setFormError('');
+    setPaymentLoading(true);
+
+    // Simulate payment processing
+    await new Promise((r) => setTimeout(r, 2000));
 
     try {
-      await api.updateSubscription(user.id, planId);
-      const updatedUser = { ...user, subscriptionPlan: planId as 'basic' | 'premium' };
+      await api.purchaseSubscription(payingPlan.id);
       const token = localStorage.getItem('token') || '';
-      setAuth(updatedUser, token);
-      setSuccess(
-        planId === 'basic'
-          ? 'Standart plana gecis yapildi!'
-          : 'Premium plana basariyla yukseltildiniz!'
-      );
+      setAuth({ ...user, subscriptionPlan: payingPlan.id as 'basic' | 'premium' }, token);
+      setPaymentSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Abonelik islenirken bir hata olustu.');
+      setFormError(err instanceof Error ? err.message : 'Ödeme işlenirken hata oluştu.');
     } finally {
-      setSubscribing(null);
+      setPaymentLoading(false);
     }
   };
 
@@ -115,10 +163,9 @@ export default function SubscriptionPage() {
       </div>
     );
   }
-
   if (!user || user.role !== 'host') return null;
 
-  const currentPlan = user.subscriptionPlan || 'none';
+  const currentPlan = user.subscriptionPlan || 'basic';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -171,7 +218,7 @@ export default function SubscriptionPage() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                Cikis Yap
+                Çıkış Yap
               </button>
             </div>
           </aside>
@@ -179,49 +226,32 @@ export default function SubscriptionPage() {
           {/* Main Content */}
           <main className="flex-1 min-w-0">
             <div className="mb-8">
-              <h1 className="text-2xl font-bold text-gray-900">Abonelik Planlari</h1>
-              <p className="text-gray-500 mt-1">Ev sahipligi deneyiminizi yukseltmek icin bir plan secin</p>
+              <h1 className="text-2xl font-bold text-gray-900">Abonelik Planları</h1>
+              <p className="text-gray-500 mt-1">Ev sahipliği deneyiminizi yükseltmek için bir plan seçin</p>
             </div>
 
             {/* Current Plan */}
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-8">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-gold-50 rounded-xl flex items-center justify-center">
-                  <span className="text-2xl">
-                    {currentPlan === 'premium' ? '👑' : currentPlan === 'basic' ? '🏷️' : '📋'}
-                  </span>
+                  <span className="text-2xl">{currentPlan === 'premium' ? '👑' : '🏷️'}</span>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Mevcut Planınız</p>
                   <p className="text-lg font-bold text-gray-900">
-                    {currentPlan === 'premium'
-                      ? 'Premium Plan'
-                      : currentPlan === 'basic'
-                      ? 'Standart Plan'
-                      : 'Standart Plan'}
+                    {currentPlan === 'premium' ? 'Premium Plan' : 'Standart Plan'}
                   </p>
+                  {user.subscriptionExpiry && currentPlan === 'premium' && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Yenileme: {new Date(user.subscriptionExpiry).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                  )}
                 </div>
-                {currentPlan !== 'none' && (
-                  <div className="ml-auto">
-                    <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
-                      Aktif
-                    </span>
-                  </div>
-                )}
+                <span className="ml-auto px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
+                  Aktif
+                </span>
               </div>
             </div>
-
-            {/* Messages */}
-            {success && (
-              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
-                {success}
-              </div>
-            )}
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-                {error}
-              </div>
-            )}
 
             {/* Plan Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -236,7 +266,7 @@ export default function SubscriptionPage() {
                   >
                     {plan.popular && (
                       <div className="bg-gold-500 text-white text-xs font-bold text-center py-1.5 uppercase tracking-wider">
-                        En Populer
+                        En Popüler
                       </div>
                     )}
                     <div className="p-6">
@@ -244,73 +274,54 @@ export default function SubscriptionPage() {
                       <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
                       <div className="mt-4 mb-6">
                         {plan.price === 0 ? (
-                          <span className="text-4xl font-bold text-gray-900">Ucretsiz</span>
+                          <span className="text-4xl font-bold text-gray-900">Ücretsiz</span>
                         ) : (
                           <>
-                            <span className="text-4xl font-bold text-gray-900">{plan.price.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
+                            <span className="text-4xl font-bold text-gray-900">
+                              {plan.price.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                            </span>
                             <span className="text-lg text-gray-500">₺</span>
                             <span className="text-gray-400">/{plan.period}</span>
                           </>
                         )}
                       </div>
 
-                      <button
-                        onClick={() => handleSubscribe(plan.id)}
-                        disabled={isCurrentPlan || subscribing !== null}
-                        className={`w-full py-3 rounded-lg font-semibold text-sm transition-colors disabled:cursor-not-allowed ${
-                          isCurrentPlan
-                            ? 'bg-gray-100 text-gray-400'
-                            : plan.popular
-                            ? 'bg-gold-500 text-white hover:bg-gold-600 disabled:opacity-50'
-                            : 'bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50'
-                        }`}
-                      >
-                        {subscribing === plan.id
-                          ? 'İşleniyor...'
-                          : isCurrentPlan
-                          ? 'Mevcut Plan'
-                          : currentPlan === 'premium' && plan.id === 'basic'
-                          ? 'Plani Dusur'
-                          : 'Plani Sec'}
-                      </button>
+                      {isCurrentPlan ? (
+                        <button
+                          disabled
+                          className="w-full py-3 rounded-lg font-semibold text-sm bg-gray-100 text-gray-400 cursor-not-allowed"
+                        >
+                          Mevcut Plan
+                        </button>
+                      ) : plan.id === 'basic' ? (
+                        <button
+                          onClick={handleDowngrade}
+                          className="w-full py-3 rounded-lg font-semibold text-sm bg-slate-800 text-white hover:bg-slate-700 transition-colors"
+                        >
+                          Standart'a Geç
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => openPayment(plan)}
+                          className="w-full py-3 rounded-lg font-semibold text-sm bg-gold-500 text-white hover:bg-gold-600 transition-colors"
+                        >
+                          Premium'a Yükselt
+                        </button>
+                      )}
 
                       <div className="mt-6 space-y-3">
                         {plan.features.map((feature, index) => (
                           <div key={index} className="flex items-center gap-3">
                             {feature.included ? (
-                              <svg
-                                className="w-5 h-5 text-green-500 flex-shrink-0"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
+                              <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                               </svg>
                             ) : (
-                              <svg
-                                className="w-5 h-5 text-gray-300 flex-shrink-0"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
+                              <svg className="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                               </svg>
                             )}
-                            <span
-                              className={`text-sm ${
-                                feature.included ? 'text-gray-700' : 'text-gray-400'
-                              }`}
-                            >
+                            <span className={`text-sm ${feature.included ? 'text-gray-700' : 'text-gray-400'}`}>
                               {feature.text}
                             </span>
                           </div>
@@ -322,57 +333,41 @@ export default function SubscriptionPage() {
               })}
             </div>
 
-            {/* Benefits Comparison */}
+            {/* Comparison Table */}
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">Plan Karsilastirmasi</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">Plan Karşılaştırması</h2>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                        Ozellik
-                      </th>
-                      <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
-                        Standart (Ucretsiz)
-                      </th>
-                      <th className="text-center py-3 px-4 text-sm font-semibold text-gold-600">
-                        Premium (499,99₺/ay)
-                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Özellik</th>
+                      <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Standart (Ücretsiz)</th>
+                      <th className="text-center py-3 px-4 text-sm font-semibold text-gold-600">Premium (499,99₺/ay)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {[
-                      { feature: 'Aylik İlan Limiti', basic: '3 ilan', premium: 'Sinirsiz' },
-                      { feature: 'One Cikarma Hakki', basic: false, premium: 'Aylik 5 hak' },
-                      { feature: 'Arama Gorunurlugu', basic: 'Standart', premium: 'Yuksek Oncelik' },
-                      { feature: 'İstatistikler', basic: 'Temel', premium: 'Detayli Analiz' },
-                      { feature: 'Musteri Destegi', basic: 'E-posta', premium: '7/24 Telefon' },
-                      { feature: 'Performans Raporlari', basic: false, premium: true },
-                      { feature: 'Tum Eklentiler', basic: false, premium: true },
-                      { feature: 'Ozel Rozetler', basic: false, premium: true },
+                      { feature: 'Aylık İlan Limiti', basic: '3 ilan', premium: 'Sınırsız' },
+                      { feature: 'Öne Çıkarma Hakkı', basic: false, premium: 'Aylık 5 hak' },
+                      { feature: 'Arama Görünürlüğü', basic: 'Standart', premium: 'Yüksek Öncelik' },
+                      { feature: 'İstatistikler', basic: 'Temel', premium: 'Detaylı Analiz' },
+                      { feature: 'Müşteri Desteği', basic: 'E-posta', premium: '7/24 Telefon' },
+                      { feature: 'Performans Raporları', basic: false, premium: true },
+                      { feature: 'Tüm Eklentiler', basic: false, premium: true },
+                      { feature: 'Özel Rozetler', basic: false, premium: true },
                     ].map((row, index) => (
                       <tr key={index} className="hover:bg-gray-50 transition-colors">
-                        <td className="py-3 px-4 text-sm text-gray-700 font-medium">
-                          {row.feature}
-                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-700 font-medium">{row.feature}</td>
                         <td className="py-3 px-4 text-center">
                           {typeof row.basic === 'boolean' ? (
-                            row.basic ? (
-                              <span className="text-green-500">✓</span>
-                            ) : (
-                              <span className="text-gray-300">✕</span>
-                            )
+                            row.basic ? <span className="text-green-500">✓</span> : <span className="text-gray-300">✕</span>
                           ) : (
                             <span className="text-sm text-gray-600">{row.basic}</span>
                           )}
                         </td>
                         <td className="py-3 px-4 text-center">
                           {typeof row.premium === 'boolean' ? (
-                            row.premium ? (
-                              <span className="text-green-500 font-bold">✓</span>
-                            ) : (
-                              <span className="text-gray-300">✕</span>
-                            )
+                            row.premium ? <span className="text-green-500 font-bold">✓</span> : <span className="text-gray-300">✕</span>
                           ) : (
                             <span className="text-sm font-medium text-gold-600">{row.premium}</span>
                           )}
@@ -386,6 +381,160 @@ export default function SubscriptionPage() {
           </main>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {payingPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !paymentLoading && setPayingPlan(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+
+            {/* Success State */}
+            {paymentSuccess ? (
+              <div className="p-8 text-center">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Ödeme Başarılı!</h2>
+                <p className="text-gray-500 mb-2">
+                  <span className="font-semibold text-gold-600">Premium Plan</span>'a yükseltildiniz.
+                </p>
+                <p className="text-sm text-gray-400 mb-6">
+                  {payingPlan.price.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}₺/ay — 1 aylık üyeliğiniz başladı.
+                </p>
+                <button
+                  onClick={() => setPayingPlan(null)}
+                  className="w-full py-3 bg-gold-500 text-white rounded-xl font-semibold hover:bg-gold-600 transition-colors"
+                >
+                  Panele Dön
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Header */}
+                <div className="bg-gradient-to-r from-gold-500 to-amber-500 p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold">Premium Plan</h2>
+                      <p className="text-white/80 text-sm mt-0.5">Aylık abonelik</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-3xl font-bold">499,99₺</p>
+                      <p className="text-white/70 text-xs">/ay</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-2 flex-wrap">
+                    {['Sınırsız ilan', '5 öne çıkarma', 'Öncelikli destek'].map((f) => (
+                      <span key={f} className="bg-white/20 text-white text-xs px-2 py-1 rounded-full">✓ {f}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Form */}
+                <div className="p-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    Kart Bilgileri
+                  </h3>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Kart Üzerindeki İsim</label>
+                      <input
+                        type="text"
+                        value={cardName}
+                        onChange={(e) => setCardName(e.target.value)}
+                        placeholder="Ad Soyad"
+                        className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Kart Numarası</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={cardNumber}
+                          onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                          placeholder="0000 0000 0000 0000"
+                          className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent pr-12"
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
+                          <div className="w-6 h-4 bg-red-500 rounded-sm opacity-80" />
+                          <div className="w-6 h-4 bg-yellow-400 rounded-sm opacity-80 -ml-3" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Son Kullanma</label>
+                        <input
+                          type="text"
+                          value={expiry}
+                          onChange={(e) => setExpiry(formatExpiry(e.target.value))}
+                          placeholder="AA/YY"
+                          className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">CVV</label>
+                        <input
+                          type="password"
+                          value={cvv}
+                          onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                          placeholder="•••"
+                          className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {formError && (
+                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">
+                      {formError}
+                    </div>
+                  )}
+
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg flex items-center gap-2 text-xs text-gray-500">
+                    <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    Ödeme bilgileriniz 256-bit SSL ile şifrelenerek güvende tutulur.
+                  </div>
+
+                  <div className="mt-4 flex gap-3">
+                    <button
+                      onClick={() => setPayingPlan(null)}
+                      disabled={paymentLoading}
+                      className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    >
+                      İptal
+                    </button>
+                    <button
+                      onClick={handlePayment}
+                      disabled={paymentLoading}
+                      className="flex-1 py-3 rounded-xl bg-gold-500 text-white text-sm font-semibold hover:bg-gold-600 transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+                    >
+                      {paymentLoading ? (
+                        <>
+                          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          İşleniyor...
+                        </>
+                      ) : (
+                        '499,99₺ Öde'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
