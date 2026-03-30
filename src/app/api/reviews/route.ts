@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuid } from 'uuid';
-import { db } from '@/lib/db';
+import { initDb, reviewsCol, listingsCol } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
+import { Review } from '@/types';
 
 export async function GET(request: NextRequest) {
-  await db.init();
+  await initDb();
   const { searchParams } = new URL(request.url);
   const listingId = searchParams.get('listingId');
 
   if (!listingId) return NextResponse.json({ error: 'listingId gerekli' }, { status: 400 });
 
-  const reviews = db.reviews.filter(r => r.listingId === listingId);
-  return NextResponse.json({ reviews });
+  const reviews = await reviewsCol();
+  const result = await reviews.find({ listingId }, { projection: { _id: 0 } }).toArray();
+  return NextResponse.json({ reviews: result });
 }
 
 export async function POST(request: NextRequest) {
@@ -34,16 +36,23 @@ export async function POST(request: NextRequest) {
     createdAt: new Date().toISOString(),
   };
 
-  db.reviews.push(review);
+  const reviews = await reviewsCol();
+  await reviews.insertOne(review as Review);
 
-  // Update listing average rating
-  const listing = db.listings.find(l => l.id === listingId);
-  if (listing) {
-    const allReviews = db.reviews.filter(r => r.listingId === listingId);
-    listing.totalReviews = allReviews.length;
-    listing.averageRating = Math.round(
-      (allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length) * 10
-    ) / 10;
+  // Update listing average rating using aggregation
+  const agg = await reviews.aggregate([
+    { $match: { listingId } },
+    { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } },
+  ]).toArray();
+
+  if (agg.length > 0) {
+    const listings = await listingsCol();
+    await listings.updateOne({ id: listingId }, {
+      $set: {
+        totalReviews: agg[0].count,
+        averageRating: Math.round(agg[0].avg * 10) / 10,
+      },
+    });
   }
 
   return NextResponse.json({ review }, { status: 201 });

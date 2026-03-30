@@ -1,36 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { initDb, usersCol } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
-  await db.init();
+  await initDb();
   const user = await getAuthUser(request);
   if (!user || user.role !== 'admin') {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
   }
 
-  const users = db.users.map(u => {
-    const { password: _, ...publicUser } = u;
-    return publicUser;
-  });
-
-  return NextResponse.json({ users });
+  const users = await usersCol();
+  const userList = await users.find({}, { projection: { _id: 0, password: 0 } }).toArray();
+  return NextResponse.json({ users: userList });
 }
 
 export async function PUT(request: NextRequest) {
-  await db.init();
+  await initDb();
   const user = await getAuthUser(request);
   if (!user || user.role !== 'admin') {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
   }
 
   const body = await request.json();
-  const target = db.users.find(u => u.id === body.id);
+  const users = await usersCol();
+  const target = await users.findOne({ id: body.id });
   if (!target) return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 404 });
 
-  if (body.role) target.role = body.role;
-  if (body.subscriptionPlan) target.subscriptionPlan = body.subscriptionPlan;
+  const updateFields: Record<string, unknown> = {};
+  if (body.role) updateFields.role = body.role;
+  if (body.subscriptionPlan) updateFields.subscriptionPlan = body.subscriptionPlan;
 
-  const { password: _, ...publicUser } = target;
-  return NextResponse.json({ user: publicUser });
+  await users.updateOne({ id: body.id }, { $set: updateFields });
+  const updated = await users.findOne({ id: body.id }, { projection: { _id: 0, password: 0 } });
+  return NextResponse.json({ user: updated });
 }

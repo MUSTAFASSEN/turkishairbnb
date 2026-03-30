@@ -1,35 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { initDb, paymentsCol, bookingsCol } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
-  await db.init();
+  await initDb();
   const user = await getAuthUser(request);
   if (!user) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
 
   const { bookingId, action } = await request.json();
 
-  const payment = db.payments.find(p => p.bookingId === bookingId);
+  const payments = await paymentsCol();
+  const payment = await payments.findOne({ bookingId }, { projection: { _id: 0 } });
   if (!payment) return NextResponse.json({ error: 'Ödeme bulunamadı' }, { status: 404 });
 
-  const booking = db.bookings.find(b => b.id === bookingId);
+  const bookings = await bookingsCol();
+  const booking = await bookings.findOne({ id: bookingId }, { projection: { _id: 0 } });
 
   if (action === 'release' && user.role === 'admin') {
-    payment.status = 'released';
+    await payments.updateOne({ bookingId }, { $set: { status: 'released' } });
     if (booking) {
-      booking.paymentStatus = 'released';
-      booking.status = 'completed';
+      await bookings.updateOne({ id: bookingId }, { $set: { paymentStatus: 'released', status: 'completed' } });
     }
-    return NextResponse.json({ payment, message: 'Ödeme ev sahibine aktarıldı' });
+    const updated = await payments.findOne({ bookingId }, { projection: { _id: 0 } });
+    return NextResponse.json({ payment: updated, message: 'Ödeme ev sahibine aktarıldı' });
   }
 
   if (action === 'refund' && (user.role === 'admin' || user.id === booking?.hostId)) {
-    payment.status = 'refunded';
+    await payments.updateOne({ bookingId }, { $set: { status: 'refunded' } });
     if (booking) {
-      booking.paymentStatus = 'refunded';
-      booking.status = 'cancelled';
+      await bookings.updateOne({ id: bookingId }, { $set: { paymentStatus: 'refunded', status: 'cancelled' } });
     }
-    return NextResponse.json({ payment, message: 'Ödeme iade edildi' });
+    const updated = await payments.findOne({ bookingId }, { projection: { _id: 0 } });
+    return NextResponse.json({ payment: updated, message: 'Ödeme iade edildi' });
   }
 
   return NextResponse.json({ error: 'Geçersiz işlem' }, { status: 400 });

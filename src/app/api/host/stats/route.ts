@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { initDb, listingsCol, bookingsCol } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
-  await db.init();
+  await initDb();
   const user = await getAuthUser(request);
   if (!user || user.role !== 'host') {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
   }
 
-  const listings = db.listings.filter(l => l.hostId === user.id);
-  const bookings = db.bookings.filter(b => b.hostId === user.id);
-  const completedBookings = bookings.filter(b => b.status === 'completed');
-  const activeBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'pending');
+  const [listings, bookings] = await Promise.all([listingsCol(), bookingsCol()]);
+
+  const [totalListings, activeListingCount] = await Promise.all([
+    listings.countDocuments({ hostId: user.id }),
+    listings.countDocuments({ hostId: user.id, isActive: true }),
+  ]);
+
+  const bookingList = await bookings.find({ hostId: user.id }, { projection: { _id: 0 } }).toArray();
+  const completedBookings = bookingList.filter(b => b.status === 'completed');
+  const activeBookings = bookingList.filter(b => b.status === 'confirmed' || b.status === 'pending');
 
   const totalEarnings = completedBookings.reduce((sum, b) => sum + b.hostEarnings, 0);
   const pendingEarnings = activeBookings.reduce((sum, b) => sum + b.hostEarnings, 0);
@@ -34,9 +40,9 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({
-    totalListings: listings.length,
-    activeListings: listings.filter(l => l.isActive).length,
-    totalBookings: bookings.length,
+    totalListings,
+    activeListings: activeListingCount,
+    totalBookings: bookingList.length,
     activeBookings: activeBookings.length,
     totalEarnings,
     pendingEarnings,

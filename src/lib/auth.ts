@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
-import { db } from './db';
+import { usersCol, initDb } from './db';
 import { PublicUser } from '@/types';
 
 function getJwtSecret(): string {
@@ -31,8 +31,9 @@ export async function getAuthUser(request: NextRequest): Promise<PublicUser | nu
   const decoded = verifyToken(token);
   if (!decoded) return null;
 
-  await db.init();
-  const user = db.users.find(u => u.id === decoded.id);
+  await initDb();
+  const users = await usersCol();
+  const user = await users.findOne({ id: decoded.id }, { projection: { _id: 0 } });
   if (!user) return null;
 
   const { password: _, ...publicUser } = user;

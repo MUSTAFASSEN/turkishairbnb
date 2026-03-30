@@ -1,20 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuid } from 'uuid';
-import { db } from '@/lib/db';
+import { initDb, bookingsCol, listingsCol, usersCol, paymentsCol } from '@/lib/db';
 import { getAuthUser, COMMISSION_RATE } from '@/lib/auth';
 import { calculateNights } from '@/lib/utils';
+import { Booking, Payment } from '@/types';
 
 export async function GET(request: NextRequest) {
-  await db.init();
+  await initDb();
+  const bookings = await bookingsCol();
 
   const { searchParams } = new URL(request.url);
 
   // Public endpoint: get booked dates for a listing (no auth required)
   const listingId = searchParams.get('listingId');
   if (listingId) {
-    const bookedDates = db.bookings
-      .filter(b => b.listingId === listingId && ['pending', 'confirmed'].includes(b.status))
-      .map(b => ({ checkIn: b.checkIn, checkOut: b.checkOut }));
+    const bookedDates = await bookings.find(
+      { listingId, status: { $in: ['pending', 'confirmed'] } },
+      { projection: { _id: 0, checkIn: 1, checkOut: 1 } }
+    ).toArray();
     return NextResponse.json({ bookedDates });
   }
 
@@ -23,20 +26,41 @@ export async function GET(request: NextRequest) {
 
   const role = searchParams.get('role') || user.role;
 
-  let bookings;
-  if (user.role === 'admin') {
-    bookings = db.bookings;
-  } else if (role === 'host') {
-    bookings = db.bookings.filter(b => b.hostId === user.id);
-  } else {
-    bookings = db.bookings.filter(b => b.guestId === user.id);
+  const filter: Record<string, unknown> = {};
+  if (user.role !== 'admin') {
+    if (role === 'host') {
+      filter.hostId = user.id;
+    } else {
+      filter.guestId = user.id;
+    }
   }
 
-  // Enrich with listing and guest info
-  const enriched = bookings.map(b => {
-    const listing = db.listings.find(l => l.id === b.listingId);
-    const guest = db.users.find(u => u.id === b.guestId);
-    const host = db.users.find(u => u.id === b.hostId);
+  const bookingList = await bookings.find(filter, { projection: { _id: 0 } }).toArray();
+
+  // Batch lookups for enrichment
+  const listingIds = [...new Set(bookingList.map(b => b.listingId))];
+  const guestIds = [...new Set(bookingList.map(b => b.guestId))];
+  const hostIds = [...new Set(bookingList.map(b => b.hostId))];
+
+  const [listings, users] = await Promise.all([
+    listingsCol(),
+    usersCol(),
+  ]);
+
+  const [listingDocs, guestDocs, hostDocs] = await Promise.all([
+    listingIds.length ? listings.find({ id: { $in: listingIds } }, { projection: { _id: 0 } }).toArray() : [],
+    guestIds.length ? users.find({ id: { $in: guestIds } }, { projection: { _id: 0 } }).toArray() : [],
+    hostIds.length ? users.find({ id: { $in: hostIds } }, { projection: { _id: 0 } }).toArray() : [],
+  ]);
+
+  const listingMap = new Map(listingDocs.map(l => [l.id, l]));
+  const guestMap = new Map(guestDocs.map(u => [u.id, u]));
+  const hostMap = new Map(hostDocs.map(u => [u.id, u]));
+
+  const enriched = bookingList.map(b => {
+    const listing = listingMap.get(b.listingId);
+    const guest = guestMap.get(b.guestId);
+    const host = hostMap.get(b.hostId);
     return {
       ...b,
       listing: listing ? { id: listing.id, title: listing.title, city: listing.city, images: listing.images } : null,
@@ -53,18 +77,21 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
 
   const { listingId, checkIn, checkOut } = await request.json();
-  const listing = db.listings.find(l => l.id === listingId);
+  const listings = await listingsCol();
+  const listing = await listings.findOne({ id: listingId }, { projection: { _id: 0 } });
   if (!listing) return NextResponse.json({ error: 'İlan bulunamadı' }, { status: 404 });
 
   const nights = calculateNights(checkIn, checkOut);
   if (nights <= 0) return NextResponse.json({ error: 'Geçersiz tarih aralığı' }, { status: 400 });
 
-  // Check for date conflicts with existing bookings
-  const hasConflict = db.bookings.some(b =>
-    b.listingId === listingId &&
-    ['pending', 'confirmed'].includes(b.status) &&
-    checkIn < b.checkOut && checkOut > b.checkIn
-  );
+  // Check for date conflicts
+  const bookings = await bookingsCol();
+  const hasConflict = await bookings.findOne({
+    listingId,
+    status: { $in: ['pending', 'confirmed'] },
+    checkIn: { $lt: checkOut },
+    checkOut: { $gt: checkIn },
+  });
   if (hasConflict) {
     return NextResponse.json({ error: 'Seçilen tarihler başka bir rezervasyonla çakışıyor' }, { status: 409 });
   }
@@ -88,10 +115,11 @@ export async function POST(request: NextRequest) {
     createdAt: new Date().toISOString(),
   };
 
-  db.bookings.push(booking);
+  await bookings.insertOne(booking as Booking);
 
   // Create payment record (escrow)
-  db.payments.push({
+  const payments = await paymentsCol();
+  await payments.insertOne({
     id: uuid(),
     bookingId: booking.id,
     amount: totalPrice,
@@ -99,7 +127,7 @@ export async function POST(request: NextRequest) {
     hostPayout: hostEarnings,
     status: 'held',
     createdAt: new Date().toISOString(),
-  });
+  } as Payment);
 
   return NextResponse.json({ booking }, { status: 201 });
 }
@@ -109,23 +137,26 @@ export async function PUT(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
 
   const { id, status } = await request.json();
-  const booking = db.bookings.find(b => b.id === id);
+  const bookings = await bookingsCol();
+  const booking = await bookings.findOne({ id }, { projection: { _id: 0 } });
   if (!booking) return NextResponse.json({ error: 'Rezervasyon bulunamadı' }, { status: 404 });
 
   if (booking.hostId !== user.id && user.role !== 'admin') {
     return NextResponse.json({ error: 'Bu işlem için yetkiniz yok' }, { status: 403 });
   }
 
-  booking.status = status;
+  const bookingUpdate: Record<string, unknown> = { status };
+  if (status === 'completed') bookingUpdate.paymentStatus = 'released';
+  if (status === 'cancelled') bookingUpdate.paymentStatus = 'refunded';
+  await bookings.updateOne({ id }, { $set: bookingUpdate });
 
-  // Update payment status based on booking status
-  const payment = db.payments.find(p => p.bookingId === id);
-  if (payment) {
-    if (status === 'completed') payment.status = 'released';
-    if (status === 'cancelled') payment.status = 'refunded';
+  // Update payment status
+  const paymentStatus = status === 'completed' ? 'released' : status === 'cancelled' ? 'refunded' : undefined;
+  if (paymentStatus) {
+    const payments = await paymentsCol();
+    await payments.updateOne({ bookingId: id }, { $set: { status: paymentStatus } });
   }
-  if (status === 'completed') booking.paymentStatus = 'released';
-  if (status === 'cancelled') booking.paymentStatus = 'refunded';
 
-  return NextResponse.json({ booking });
+  const updated = await bookings.findOne({ id }, { projection: { _id: 0 } });
+  return NextResponse.json({ booking: updated });
 }

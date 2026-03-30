@@ -1,31 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { initDb, usersCol, listingsCol, bookingsCol } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
-  await db.init();
+  await initDb();
   const user = await getAuthUser(request);
   if (!user || user.role !== 'admin') {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
   }
 
-  const totalUsers = db.users.length;
-  const totalHosts = db.users.filter(u => u.role === 'host').length;
-  const totalGuests = db.users.filter(u => u.role === 'guest').length;
-  const totalListings = db.listings.length;
-  const activeListings = db.listings.filter(l => l.isActive).length;
-  const totalBookings = db.bookings.length;
+  const [users, listings, bookings] = await Promise.all([usersCol(), listingsCol(), bookingsCol()]);
 
-  const completedBookings = db.bookings.filter(b => b.status === 'completed');
-  const totalRevenue = completedBookings.reduce((sum, b) => sum + b.totalPrice, 0);
-  const totalCommission = completedBookings.reduce((sum, b) => sum + b.commissionAmount, 0);
+  const [totalUsers, totalHosts, totalGuests, totalListings, activeListings, totalBookings] = await Promise.all([
+    users.countDocuments(),
+    users.countDocuments({ role: 'host' }),
+    users.countDocuments({ role: 'guest' }),
+    listings.countDocuments(),
+    listings.countDocuments({ isActive: true }),
+    bookings.countDocuments(),
+  ]);
 
-  // Subscription revenue
-  const basicSubs = db.users.filter(u => u.subscriptionPlan === 'basic').length;
-  const premiumSubs = db.users.filter(u => u.subscriptionPlan === 'premium').length;
+  // Revenue from completed bookings
+  const revenueAgg = await bookings.aggregate([
+    { $match: { status: 'completed' } },
+    { $group: { _id: null, totalRevenue: { $sum: '$totalPrice' }, totalCommission: { $sum: '$commissionAmount' } } },
+  ]).toArray();
+  const totalRevenue = revenueAgg[0]?.totalRevenue || 0;
+  const totalCommission = revenueAgg[0]?.totalCommission || 0;
+
+  // Subscription counts
+  const [basicSubs, premiumSubs] = await Promise.all([
+    users.countDocuments({ subscriptionPlan: 'basic' }),
+    users.countDocuments({ subscriptionPlan: 'premium' }),
+  ]);
   const subscriptionRevenue = (basicSubs * 499) + (premiumSubs * 999);
 
   // Monthly revenue (last 6 months)
+  const completedBookings = await bookings.find(
+    { status: 'completed' },
+    { projection: { _id: 0, commissionAmount: 1, createdAt: 1 } }
+  ).toArray();
+
   const monthlyRevenue: { month: string; commission: number; subscriptions: number }[] = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date();

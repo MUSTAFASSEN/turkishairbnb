@@ -1,48 +1,61 @@
+import { Collection } from 'mongodb';
 import { User, Listing, Booking, Review, Payment } from '@/types';
+import { getDb } from './mongodb';
 import bcrypt from 'bcryptjs';
 
-// In-memory database
-class Database {
-  users: User[] = [];
-  listings: Listing[] = [];
-  bookings: Booking[] = [];
-  reviews: Review[] = [];
-  payments: Payment[] = [];
-  private initialized = false;
+export async function usersCol(): Promise<Collection<User>> {
+  return (await getDb()).collection<User>('users');
+}
+export async function listingsCol(): Promise<Collection<Listing>> {
+  return (await getDb()).collection<Listing>('listings');
+}
+export async function bookingsCol(): Promise<Collection<Booking>> {
+  return (await getDb()).collection<Booking>('bookings');
+}
+export async function reviewsCol(): Promise<Collection<Review>> {
+  return (await getDb()).collection<Review>('reviews');
+}
+export async function paymentsCol(): Promise<Collection<Payment>> {
+  return (await getDb()).collection<Payment>('payments');
+}
 
-  async init() {
-    if (this.initialized) return;
-    this.initialized = true;
+let initialized = false;
 
-    const hash = (pw: string) => bcrypt.hashSync(pw, 10);
+export async function initDb() {
+  if (initialized) return;
+  initialized = true;
 
-    // Admin account — update credentials in .env or here before deployment
+  const db = await getDb();
+
+  await Promise.all([
+    db.collection('users').createIndex({ id: 1 }, { unique: true }),
+    db.collection('users').createIndex({ email: 1 }, { unique: true }),
+    db.collection('listings').createIndex({ id: 1 }, { unique: true }),
+    db.collection('listings').createIndex({ hostId: 1 }),
+    db.collection('bookings').createIndex({ id: 1 }, { unique: true }),
+    db.collection('bookings').createIndex({ listingId: 1 }),
+    db.collection('bookings').createIndex({ guestId: 1 }),
+    db.collection('bookings').createIndex({ hostId: 1 }),
+    db.collection('reviews').createIndex({ id: 1 }, { unique: true }),
+    db.collection('reviews').createIndex({ listingId: 1 }),
+    db.collection('payments').createIndex({ id: 1 }, { unique: true }),
+    db.collection('payments').createIndex({ bookingId: 1 }),
+  ]);
+
+  const users = await usersCol();
+  const adminExists = await users.findOne({ role: 'admin' });
+  if (!adminExists) {
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@turkevim.com';
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-
-    this.users = [
-      {
-        id: 'user-1',
-        email: adminEmail,
-        password: hash(adminPassword),
-        name: 'Admin',
-        role: 'admin',
-        phone: '',
-        subscriptionPlan: 'none',
-        createdAt: new Date().toISOString(),
-      },
-    ];
-
-    this.listings = [];
-    this.bookings = [];
-    this.reviews = [];
-    this.payments = [];
+    await users.insertOne({
+      id: 'user-1',
+      email: adminEmail,
+      password: bcrypt.hashSync(adminPassword, 10),
+      name: 'Admin',
+      role: 'admin',
+      phone: '',
+      subscriptionPlan: 'none',
+      createdAt: new Date().toISOString(),
+    } as User);
   }
 }
-
-// Singleton
-const globalDb = globalThis as unknown as { __db: Database };
-if (!globalDb.__db) {
-  globalDb.__db = new Database();
-}
-export const db = globalDb.__db;
