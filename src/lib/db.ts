@@ -1,5 +1,5 @@
 import { Collection } from 'mongodb';
-import { User, Listing, Booking, Review, Payment } from '@/types';
+import { User, Listing, Booking, Review, Payment, Favorite } from '@/types';
 import { getDb } from './mongodb';
 import bcrypt from 'bcryptjs';
 
@@ -17,6 +17,9 @@ export async function reviewsCol(): Promise<Collection<Review>> {
 }
 export async function paymentsCol(): Promise<Collection<Payment>> {
   return (await getDb()).collection<Payment>('payments');
+}
+export async function favoritesCol(): Promise<Collection<Favorite>> {
+  return (await getDb()).collection<Favorite>('favorites');
 }
 
 let initialized = false;
@@ -40,6 +43,8 @@ export async function initDb() {
     db.collection('reviews').createIndex({ listingId: 1 }),
     db.collection('payments').createIndex({ id: 1 }, { unique: true }),
     db.collection('payments').createIndex({ bookingId: 1 }),
+    db.collection('favorites').createIndex({ userId: 1, listingId: 1 }, { unique: true }),
+    db.collection('favorites').createIndex({ userId: 1 }),
   ]);
 
   const users = await usersCol();

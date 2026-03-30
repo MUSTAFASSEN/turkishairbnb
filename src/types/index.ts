@@ -88,4 +88,11 @@ export interface Payment {
   createdAt: string;
 }
 
+export interface Favorite {
+  id: string;
+  userId: string;
+  listingId: string;
+  createdAt: string;
+}
+
 export type PublicUser = Omit<User, 'password'>;

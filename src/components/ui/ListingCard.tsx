@@ -1,14 +1,30 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Listing } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { useAuthStore } from '@/store/authStore';
 
 interface Props {
   listing: Listing;
 }
 
 export default function ListingCard({ listing }: Props) {
+  const { user, favoriteIds, toggleFavorite } = useAuthStore();
+  const router = useRouter();
+  const isFavorite = favoriteIds.includes(listing.id);
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      router.push('/giris');
+      return;
+    }
+    toggleFavorite(listing.id);
+  };
+
   return (
     <Link href={`/ilan/${listing.id}`} className="group">
       <div className="relative">
@@ -22,9 +38,9 @@ export default function ListingCard({ listing }: Props) {
           {/* Heart icon */}
           <button
             className="absolute top-3 right-3 z-10"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onClick={handleFavoriteClick}
           >
-            <svg className="w-7 h-7 drop-shadow-sm" viewBox="0 0 32 32" fill="rgba(0,0,0,0.5)" stroke="white" strokeWidth={2}>
+            <svg className="w-7 h-7 drop-shadow-sm" viewBox="0 0 32 32" fill={isFavorite ? '#ef4444' : 'rgba(0,0,0,0.5)'} stroke="white" strokeWidth={2}>
               <path d="M16 28c7-4.73 14-10 14-17a6.98 6.98 0 00-7-7c-1.8 0-3.58.68-4.95 2.05L16 8.1l-2.05-2.05A6.98 6.98 0 009 4a6.98 6.98 0 00-7 7c0 7 7 12.27 14 17z"/>
             </svg>
           </button>

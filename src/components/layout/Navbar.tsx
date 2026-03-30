@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 
 export default function Navbar() {
-  const { user, logout, loadFromStorage } = useAuthStore();
+  const { user, logout, loadFromStorage, loadFavorites } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -17,6 +17,10 @@ export default function Navbar() {
     loadFromStorage();
     setMounted(true);
   }, [loadFromStorage]);
+
+  useEffect(() => {
+    if (user) loadFavorites();
+  }, [user, loadFavorites]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -120,6 +124,9 @@ export default function Navbar() {
                     </div>
                     <Link href="/profil" className="block px-4 py-2.5 text-sm text-hof hover:bg-gray-50 transition" onClick={() => setMenuOpen(false)}>
                       Profil
+                    </Link>
+                    <Link href="/favorilerim" className="block px-4 py-2.5 text-sm text-hof hover:bg-gray-50 transition" onClick={() => setMenuOpen(false)}>
+                      Favorilerim
                     </Link>
                     <Link href="/ilanlar" className="block px-4 py-2.5 text-sm text-hof hover:bg-gray-50 transition" onClick={() => setMenuOpen(false)}>
                       İlanları Keşfet

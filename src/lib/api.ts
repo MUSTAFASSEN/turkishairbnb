@@ -55,6 +55,14 @@ export const api = {
   processPayment: (data: Record<string, unknown>) =>
     request('/payments', { method: 'POST', body: JSON.stringify(data) }),
 
+  // Favorites
+  getFavorites: () => request('/favorites'),
+  getFavoriteIds: () => request('/favorites?idsOnly=true'),
+  addFavorite: (listingId: string) =>
+    request('/favorites', { method: 'POST', body: JSON.stringify({ listingId }) }),
+  removeFavorite: (listingId: string) =>
+    request(`/favorites?listingId=${listingId}`, { method: 'DELETE' }),
+
   // Host
   getHostStats: () => request('/host/stats'),
 
