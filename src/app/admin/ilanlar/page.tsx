@@ -13,6 +13,8 @@ interface Listing {
   city: string;
   pricePerNight: number;
   isFeatured: boolean;
+  featuredStartAt?: string;
+  featuredEndAt?: string;
   isActive: boolean;
   hostId: string;
 }
@@ -90,13 +92,11 @@ export default function AdminIlanlarPage() {
   const toggleFeatured = async (listing: Listing) => {
     try {
       setActionLoading(listing.id + '-featured');
-      await api.updateListing(listing.id, { isFeatured: !listing.isFeatured });
+      const data = await api.updateListing(listing.id, { isFeatured: !listing.isFeatured });
       setListings((prev) =>
-        prev.map((l) =>
-          l.id === listing.id ? { ...l, isFeatured: !l.isFeatured } : l
-        )
+        prev.map((l) => l.id === listing.id ? { ...l, ...data.listing } : l)
       );
-      setSuccessMsg(listing.isFeatured ? 'Ilan one cikarilmaktan kaldirildi' : 'Ilan one cikarildi');
+      setSuccessMsg(listing.isFeatured ? 'İlan öne çıkarılmaktan kaldırıldı' : 'İlan öne çıkarıldı');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (error) {
       console.error('Ilan guncellenirken hata:', error);
@@ -234,7 +234,10 @@ export default function AdminIlanlarPage() {
                         Fiyat
                       </th>
                       <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        One Cikan
+                        Öne Çıkan
+                      </th>
+                      <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Öne Çıkarma Tarihleri
                       </th>
                       <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Durum
@@ -273,6 +276,26 @@ export default function AdminIlanlarPage() {
                           </button>
                         </td>
                         <td className="px-6 py-4">
+                          {listing.isFeatured && listing.featuredStartAt && listing.featuredEndAt ? (
+                            <div className="text-xs">
+                              <div className="flex items-center gap-1 text-green-600 font-medium">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Başlangıç: {new Date(listing.featuredStartAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </div>
+                              <div className="flex items-center gap-1 text-red-500 font-medium mt-0.5">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Bitiş: {new Date(listing.featuredEndAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
                           <button
                             onClick={() => toggleActive(listing)}
                             disabled={actionLoading === listing.id + '-active'}
@@ -298,7 +321,7 @@ export default function AdminIlanlarPage() {
                     ))}
                     {listings.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                        <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
                           Henuz ilan bulunmuyor
                         </td>
                       </tr>

@@ -47,6 +47,8 @@ export interface Listing {
   bedrooms: number;
   bathrooms: number;
   isFeatured: boolean;
+  featuredStartAt?: string;
+  featuredEndAt?: string;
   isActive: boolean;
   averageRating: number;
   totalReviews: number;

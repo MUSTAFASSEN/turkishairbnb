@@ -144,11 +144,45 @@ export async function PUT(request: NextRequest) {
   if (body.maxGuests) updateFields.maxGuests = body.maxGuests;
   if (body.bedrooms) updateFields.bedrooms = body.bedrooms;
   if (body.bathrooms) updateFields.bathrooms = body.bathrooms;
-  if (body.isFeatured !== undefined) updateFields.isFeatured = body.isFeatured;
   if (body.isActive !== undefined) updateFields.isActive = body.isActive;
   if (body.category) updateFields.category = body.category;
 
-  await listings.updateOne({ id: body.id }, { $set: updateFields });
+  const unsetFields: Record<string, ''> = {};
+
+  if (body.isFeatured !== undefined) {
+    if (body.isFeatured === true) {
+      // Only premium hosts or admin can feature listings
+      if (user.role !== 'admin') {
+        const users = await usersCol();
+        const hostUser = await users.findOne({ id: user.id });
+        if (hostUser?.subscriptionPlan !== 'premium') {
+          return NextResponse.json({ error: 'Bu özellik yalnızca Premium üyelere aittir.' }, { status: 403 });
+        }
+        // Max 5 simultaneously featured listings per premium host
+        const featuredCount = await listings.countDocuments({
+          hostId: user.id,
+          isFeatured: true,
+          id: { $ne: body.id },
+        });
+        if (featuredCount >= 5) {
+          return NextResponse.json({ error: 'En fazla 5 ilanınızı öne çıkarabilirsiniz.' }, { status: 403 });
+        }
+      }
+      const now = new Date();
+      updateFields.isFeatured = true;
+      updateFields.featuredStartAt = now.toISOString();
+      updateFields.featuredEndAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    } else {
+      updateFields.isFeatured = false;
+      unsetFields.featuredStartAt = '';
+      unsetFields.featuredEndAt = '';
+    }
+  }
+
+  const updateOp: Record<string, unknown> = { $set: updateFields };
+  if (Object.keys(unsetFields).length > 0) updateOp.$unset = unsetFields;
+
+  await listings.updateOne({ id: body.id }, updateOp);
   const updated = await listings.findOne({ id: body.id }, { projection: { _id: 0 } });
   return NextResponse.json({ listing: updated });
 }
