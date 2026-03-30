@@ -300,14 +300,14 @@ export default function SubscriptionPage() {
                           onClick={handleDowngrade}
                           className="w-full py-3 rounded-lg font-semibold text-sm bg-slate-800 text-white hover:bg-slate-700 transition-colors"
                         >
-                          Standart'a Geç
+                          Standart&apos;a Geç
                         </button>
                       ) : (
                         <button
                           onClick={() => openPayment(plan)}
                           className="w-full py-3 rounded-lg font-semibold text-sm bg-gold-500 text-white hover:bg-gold-600 transition-colors"
                         >
-                          Premium'a Yükselt
+                          Premium&apos;a Yükselt
                         </button>
                       )}
 
@@ -400,7 +400,7 @@ export default function SubscriptionPage() {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Ödeme Başarılı!</h2>
                 <p className="text-gray-500 mb-2">
-                  <span className="font-semibold text-gold-600">Premium Plan</span>'a yükseltildiniz.
+                  <span className="font-semibold text-gold-600">Premium Plan</span>&apos;a yükseltildiniz.
                 </p>
                 <p className="text-sm text-gray-400 mb-6">
                   {payingPlan.price.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}₺/ay — 1 aylık üyeliğiniz başladı.
