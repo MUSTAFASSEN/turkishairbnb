@@ -171,9 +171,15 @@ export default function ChatPage() {
 
   const groups = groupByDay(messages);
 
+  const chatBg: React.CSSProperties = {
+    backgroundColor: '#f5ece0',
+    backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='52' height='52' viewBox='0 0 52 52' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M26 3L49 26L26 49L3 26z' fill='none' stroke='%23c9944a' stroke-width='0.8' stroke-opacity='0.18'/%3E%3C/svg%3E\")",
+    backgroundSize: '52px 52px',
+  };
+
   if (isLoading || loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-80px)] bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="flex items-center justify-center h-[calc(100vh-80px)]" style={chatBg}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 border-4 border-gold-500 border-t-transparent mx-auto" />
           <p className="text-foggy text-sm mt-3">Yükleniyor...</p>
@@ -183,7 +189,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col bg-gradient-to-br from-gray-50 to-gray-100" style={{ height: 'calc(100vh - 80px)' }}>
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 80px)', ...chatBg }}>
 
       {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3 shrink-0">
@@ -232,11 +238,11 @@ export default function ChatPage() {
           <div key={gi}>
             {/* Day separator */}
             <div className="flex items-center gap-3 my-4">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-foggy font-medium bg-gray-100 px-3 py-1 rounded-full shrink-0">
+              <div className="flex-1 h-px bg-amber-200/40" />
+              <span className="text-xs text-amber-700/60 font-medium bg-amber-100/60 px-3 py-1 rounded-full shrink-0 backdrop-blur-sm">
                 {group.label}
               </span>
-              <div className="flex-1 h-px bg-gray-200" />
+              <div className="flex-1 h-px bg-amber-200/40" />
             </div>
 
             {group.messages.map((msg, mi) => {

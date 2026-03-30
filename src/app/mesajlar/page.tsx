@@ -90,7 +90,7 @@ export default function MesajlarPage() {
 
   if (isLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="min-h-screen" style={{backgroundColor:'#faf4ed'}}>
         <div className="max-w-2xl mx-auto px-4 pt-10">
           <div className="h-8 bg-gray-200 rounded-lg w-32 mb-6 animate-pulse" />
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
