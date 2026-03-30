@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/auth';
 export async function POST(request: NextRequest) {
   await initDb();
   const user = await getAuthUser(request);
-  if (!user || user.role !== 'host') {
+  if (!user || (user.role !== 'host' && user.role !== 'admin')) {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
   }
 

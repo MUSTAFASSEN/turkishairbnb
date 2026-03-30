@@ -110,20 +110,22 @@ export default function SubscriptionPage() {
   };
 
   const handleDowngrade = async () => {
-    if (!user) return;
+    const currentUser = user;
+    if (!currentUser) return;
     if (!confirm('Standart plana geçmek istediğinizden emin misiniz?')) return;
     try {
-      const data = await api.purchaseSubscription('basic');
+      await api.purchaseSubscription('basic');
       const token = localStorage.getItem('token') || '';
-      setAuth({ ...user, subscriptionPlan: 'basic' }, token);
-      void data;
+      setAuth({ ...currentUser, subscriptionPlan: 'basic' }, token);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Hata oluştu');
     }
   };
 
   const handlePayment = async () => {
-    if (!payingPlan || !user) return;
+    const currentUser = user;
+    const currentPlan = payingPlan;
+    if (!currentPlan || !currentUser) return;
 
     if (!cardName.trim() || !cardNumber.trim() || !expiry.trim() || !cvv.trim()) {
       setFormError('Lütfen tüm ödeme bilgilerini doldurun.');
@@ -145,9 +147,9 @@ export default function SubscriptionPage() {
     await new Promise((r) => setTimeout(r, 2000));
 
     try {
-      await api.purchaseSubscription(payingPlan.id);
+      await api.purchaseSubscription(currentPlan.id);
       const token = localStorage.getItem('token') || '';
-      setAuth({ ...user, subscriptionPlan: payingPlan.id as 'basic' | 'premium' }, token);
+      setAuth({ ...currentUser, subscriptionPlan: currentPlan.id as 'basic' | 'premium' }, token);
       setPaymentSuccess(true);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Ödeme işlenirken hata oluştu.');
