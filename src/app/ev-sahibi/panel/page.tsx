@@ -305,33 +305,50 @@ export default function HostDashboardPage() {
                         {/* Feature toggle — herkese göster, premium olmayana kilit */}
                         <div className="mt-3 border-t border-gray-100 pt-3">
                           {user?.subscriptionPlan === 'premium' ? (
-                            <>
-                              <button
-                                onClick={() => toggleFeatured(listing)}
-                                disabled={featureLoading === listing.id}
-                                className={`w-full flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg font-medium transition-colors ${
-                                  listing.isFeatured
-                                    ? 'bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200'
-                                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
-                                }`}
-                              >
-                                {featureLoading === listing.id ? (
-                                  <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                ) : (
-                                  <svg className="w-3.5 h-3.5" fill={listing.isFeatured ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                                  </svg>
-                                )}
-                                {listing.isFeatured ? 'Öne Çıkarmayı Kaldır' : 'İlanı Öne Çıkar'}
-                              </button>
-                              {listing.isFeatured && listing.featuredStartAt && listing.featuredEndAt && (
-                                <p className="text-[10px] text-amber-500 text-center mt-1">
-                                  {new Date(listing.featuredStartAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
-                                  {' – '}
-                                  {new Date(listing.featuredEndAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
-                                </p>
-                              )}
-                            </>
+                            (() => {
+                              const isLocked = listing.isFeatured && listing.featuredEndAt
+                                ? new Date(listing.featuredEndAt) > new Date()
+                                : false;
+                              return (
+                                <>
+                                  <button
+                                    onClick={() => !isLocked && toggleFeatured(listing)}
+                                    disabled={featureLoading === listing.id || isLocked}
+                                    title={isLocked ? `${new Date(listing.featuredEndAt!).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} tarihine kadar kaldırılamaz` : undefined}
+                                    className={`w-full flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg font-medium transition-colors ${
+                                      isLocked
+                                        ? 'bg-amber-50 text-amber-400 border border-amber-200 cursor-not-allowed opacity-70'
+                                        : listing.isFeatured
+                                        ? 'bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200'
+                                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                                    }`}
+                                  >
+                                    {featureLoading === listing.id ? (
+                                      <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                    ) : isLocked ? (
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                      </svg>
+                                    ) : (
+                                      <svg className="w-3.5 h-3.5" fill={listing.isFeatured ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                      </svg>
+                                    )}
+                                    {isLocked ? 'Öne Çıkarılıyor (Kilitli)' : listing.isFeatured ? 'Öne Çıkarmayı Kaldır' : 'İlanı Öne Çıkar'}
+                                  </button>
+                                  {listing.isFeatured && listing.featuredStartAt && listing.featuredEndAt && (
+                                    <p className="text-[10px] text-amber-500 text-center mt-1">
+                                      {new Date(listing.featuredStartAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                      {' – '}
+                                      {new Date(listing.featuredEndAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                      {isLocked && (
+                                        <span className="ml-1 text-amber-400">🔒</span>
+                                      )}
+                                    </p>
+                                  )}
+                                </>
+                              );
+                            })()
                           ) : (
                             <Link
                               href="/ev-sahibi/abonelik"

@@ -173,6 +173,19 @@ export async function PUT(request: NextRequest) {
       updateFields.featuredStartAt = now.toISOString();
       updateFields.featuredEndAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
     } else {
+      // Hosts cannot unfeature before featuredEndAt expires — admin can always override
+      if (user.role !== 'admin') {
+        const current = await listings.findOne({ id: body.id }, { projection: { featuredEndAt: 1 } });
+        if (current?.featuredEndAt && new Date(current.featuredEndAt) > new Date()) {
+          const endDate = new Date(current.featuredEndAt).toLocaleDateString('tr-TR', {
+            day: 'numeric', month: 'long', year: 'numeric',
+          });
+          return NextResponse.json(
+            { error: `Öne çıkarma süresi henüz dolmadı. ${endDate} tarihine kadar kaldıramazsınız.` },
+            { status: 403 }
+          );
+        }
+      }
       updateFields.isFeatured = false;
       unsetFields.featuredStartAt = '';
       unsetFields.featuredEndAt = '';
