@@ -1,5 +1,5 @@
 import { Collection } from 'mongodb';
-import { User, Listing, Booking, Review, Payment, Favorite } from '@/types';
+import { User, Listing, Booking, Review, Payment, Favorite, Conversation, Message } from '@/types';
 import { getDb } from './mongodb';
 import bcrypt from 'bcryptjs';
 
@@ -20,6 +20,12 @@ export async function paymentsCol(): Promise<Collection<Payment>> {
 }
 export async function favoritesCol(): Promise<Collection<Favorite>> {
   return (await getDb()).collection<Favorite>('favorites');
+}
+export async function conversationsCol(): Promise<Collection<Conversation>> {
+  return (await getDb()).collection<Conversation>('conversations');
+}
+export async function messagesCol(): Promise<Collection<Message>> {
+  return (await getDb()).collection<Message>('messages');
 }
 
 let initialized = false;
@@ -45,6 +51,12 @@ export async function initDb() {
     db.collection('payments').createIndex({ bookingId: 1 }),
     db.collection('favorites').createIndex({ userId: 1, listingId: 1 }, { unique: true }),
     db.collection('favorites').createIndex({ userId: 1 }),
+    db.collection('conversations').createIndex({ id: 1 }, { unique: true }),
+    db.collection('conversations').createIndex({ participantIds: 1 }),
+    db.collection('conversations').createIndex({ type: 1 }),
+    db.collection('messages').createIndex({ id: 1 }, { unique: true }),
+    db.collection('messages').createIndex({ conversationId: 1, createdAt: 1 }),
+    db.collection('messages').createIndex({ senderId: 1 }),
   ]);
 
   const users = await usersCol();

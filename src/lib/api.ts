@@ -55,6 +55,17 @@ export const api = {
   processPayment: (data: Record<string, unknown>) =>
     request('/payments', { method: 'POST', body: JSON.stringify(data) }),
 
+  // Conversations & Messages
+  getConversations: () => request('/conversations'),
+  createConversation: (data: { participantId?: string; type?: string }) =>
+    request('/conversations', { method: 'POST', body: JSON.stringify(data) }),
+  getMessages: (conversationId: string) =>
+    request(`/messages?conversationId=${conversationId}`),
+  sendMessage: (conversationId: string, content: string) =>
+    request('/messages', { method: 'POST', body: JSON.stringify({ conversationId, content }) }),
+  markRead: (conversationId: string) =>
+    request('/messages', { method: 'PUT', body: JSON.stringify({ conversationId }) }),
+
   // Favorites
   getFavorites: () => request('/favorites'),
   getFavoriteIds: () => request('/favorites?idsOnly=true'),

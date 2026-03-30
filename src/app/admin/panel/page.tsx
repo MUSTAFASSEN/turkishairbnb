@@ -24,6 +24,7 @@ const sidebarLinks = [
   { href: '/admin/rezervasyonlar', label: 'Rezervasyonlar', icon: '📅' },
   { href: '/admin/gelirler', label: 'Gelirler', icon: '💰' },
   { href: '/admin/abonelikler', label: 'Abonelikler', icon: '⭐' },
+  { href: '/admin/mesajlar', label: 'Mesajlar', icon: '💬' },
 ];
 
 export default function AdminPanelPage() {

@@ -95,4 +95,24 @@ export interface Favorite {
   createdAt: string;
 }
 
+export interface Conversation {
+  id: string;
+  participantIds: string[];
+  type: 'direct' | 'support';
+  lastMessage?: string;
+  lastMessageAt?: string;
+  unreadCounts: Record<string, number>;
+  createdAt: string;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  createdAt: string;
+  readAt?: string;
+}
+
 export type PublicUser = Omit<User, 'password'>;

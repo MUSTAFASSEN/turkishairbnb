@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import { api } from '@/lib/api';
 
 export default function Navbar() {
   const { user, logout, loadFromStorage, loadFavorites } = useAuthStore();
@@ -11,6 +12,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,6 +23,22 @@ export default function Navbar() {
   useEffect(() => {
     if (user) loadFavorites();
   }, [user, loadFavorites]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnread = async () => {
+      try {
+        const data = await api.getConversations();
+        const total = (data.conversations || []).reduce((sum: number, c: { unread: number }) => sum + (c.unread || 0), 0);
+        setUnreadCount(total);
+      } catch {
+        // ignore
+      }
+    };
+    fetchUnread();
+    const t = setInterval(fetchUnread, 30000);
+    return () => clearInterval(t);
+  }, [user]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -127,6 +145,18 @@ export default function Navbar() {
                     </Link>
                     <Link href="/favorilerim" className="block px-4 py-2.5 text-sm text-hof hover:bg-gray-50 transition" onClick={() => setMenuOpen(false)}>
                       Favorilerim
+                    </Link>
+                    <Link
+                      href={user.role === 'admin' ? '/admin/mesajlar' : '/mesajlar'}
+                      className="flex items-center justify-between px-4 py-2.5 text-sm text-hof hover:bg-gray-50 transition"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <span>Mesajlar</span>
+                      {unreadCount > 0 && (
+                        <span className="bg-red-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
                     </Link>
                     <Link href="/ilanlar" className="block px-4 py-2.5 text-sm text-hof hover:bg-gray-50 transition" onClick={() => setMenuOpen(false)}>
                       İlanları Keşfet

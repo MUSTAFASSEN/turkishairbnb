@@ -290,12 +290,30 @@ export default function IlanDetayPage() {
                 <div className="w-14 h-14 rounded-full bg-gold-100 flex items-center justify-center text-gold-600 text-xl font-bold shrink-0">
                   {host.name?.charAt(0).toUpperCase()}
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">Ev Sahibi: {host.name}</h3>
                   <p className="text-sm text-gray-500">
                     {formatDate(host.createdAt)} tarihinden beri üye
                   </p>
                 </div>
+                {user && user.id !== host.id && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const data = await api.createConversation({ participantId: host.id });
+                        router.push(`/mesajlar/${data.conversation.id}`);
+                      } catch {
+                        router.push('/mesajlar');
+                      }
+                    }}
+                    className="shrink-0 flex items-center gap-2 bg-gold-500 text-white text-sm px-4 py-2 rounded-lg hover:bg-gold-600 transition font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    İletişime Geç
+                  </button>
+                )}
               </div>
             )}
 

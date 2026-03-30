@@ -10,6 +10,7 @@ const sidebarLinks = [
   { href: '/ev-sahibi/rezervasyonlar', label: 'Rezervasyonlar', icon: '📅' },
   { href: '/ev-sahibi/kazanclar', label: 'Kazançlar', icon: '💰' },
   { href: '/ev-sahibi/abonelik', label: 'Abonelik', icon: '⭐' },
+  { href: '/mesajlar', label: 'Mesajlar', icon: '💬' },
 ];
 
 export function HostSidebar({ active }: { active: string }) {
