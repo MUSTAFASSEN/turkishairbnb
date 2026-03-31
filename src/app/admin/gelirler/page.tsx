@@ -21,6 +21,7 @@ interface Booking {
 
 interface Stats {
   totalRevenue: number;
+  totalCommission: number;
   commissionRevenue: number;
   subscriptionRevenue: number;
   monthlyRevenue: { month: string; revenue: number }[];
@@ -87,10 +88,10 @@ export default function AdminGelirlerPage() {
     return null;
   }
 
-  const totalCommission = bookings.reduce(
-    (sum, b) => sum + (b.commission || b.totalPrice * COMMISSION_RATE),
-    0
-  );
+  const activeBookings = bookings.filter((b) => b.status !== 'cancelled');
+  const totalCommission =
+    stats?.totalCommission ||
+    activeBookings.reduce((sum, b) => sum + (b.commission || b.totalPrice * COMMISSION_RATE), 0);
 
   const basicCount = stats?.subscriptionCounts?.basic || 0;
   const premiumCount = stats?.subscriptionCounts?.premium || 0;
@@ -281,9 +282,9 @@ export default function AdminGelirlerPage() {
                     <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
                       <div>
                         <p className="font-medium text-gray-800">Toplam Rezervasyon</p>
-                        <p className="text-sm text-gray-500">Tum zamanlar</p>
+                        <p className="text-sm text-gray-500">İptal edilmeyenler</p>
                       </div>
-                      <p className="text-2xl font-bold text-green-600">{bookings.length}</p>
+                      <p className="text-2xl font-bold text-green-600">{activeBookings.length}</p>
                     </div>
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border-t-2 border-gray-200">
                       <div>
@@ -350,20 +351,21 @@ export default function AdminGelirlerPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {bookings.map((booking) => {
-                        const commission = booking.commission || booking.totalPrice * COMMISSION_RATE;
+                        const isCancelled = booking.status === 'cancelled';
+                        const commission = isCancelled ? 0 : (booking.commission || booking.totalPrice * COMMISSION_RATE);
                         return (
-                          <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 text-sm font-medium text-gray-800">
+                          <tr key={booking.id} className={`transition-colors ${isCancelled ? 'bg-red-50/40 hover:bg-red-50' : 'hover:bg-gray-50'}`}>
+                            <td className={`px-6 py-4 text-sm font-medium ${isCancelled ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
                               {booking.listing?.title || booking.listingTitle || '-'}
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-600">
+                            <td className={`px-6 py-4 text-sm ${isCancelled ? 'text-gray-400' : 'text-gray-600'}`}>
                               {booking.guest?.name || booking.guestName || '-'}
                             </td>
-                            <td className="px-6 py-4 text-sm font-medium text-gray-800">
+                            <td className={`px-6 py-4 text-sm font-medium ${isCancelled ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
                               {formatCurrency(booking.totalPrice)}
                             </td>
-                            <td className="px-6 py-4 text-sm font-medium text-gold-600">
-                              {formatCurrency(commission)}
+                            <td className={`px-6 py-4 text-sm font-medium ${isCancelled ? 'text-red-400' : 'text-gold-600'}`}>
+                              {isCancelled ? '₺0' : formatCurrency(commission)}
                             </td>
                             <td className="px-6 py-4">
                               <span
@@ -378,11 +380,11 @@ export default function AdminGelirlerPage() {
                                 }`}
                               >
                                 {booking.status === 'completed'
-                                  ? 'Tamamlandi'
+                                  ? 'Tamamlandı'
                                   : booking.status === 'confirmed'
-                                  ? 'Onaylandi'
+                                  ? 'Onaylandı'
                                   : booking.status === 'cancelled'
-                                  ? 'Iptal'
+                                  ? 'İptal Edildi'
                                   : 'Beklemede'}
                               </span>
                             </td>
