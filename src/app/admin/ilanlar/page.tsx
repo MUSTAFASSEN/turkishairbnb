@@ -36,6 +36,7 @@ const sidebarLinks = [
   { href: '/admin/gelirler', label: 'Gelirler', icon: '💰' },
   { href: '/admin/abonelikler', label: 'Abonelikler', icon: '⭐' },
   { href: '/admin/mesajlar', label: 'Mesajlar', icon: '💬' },
+  { href: '/admin/emanet', label: 'Emanet', icon: '🔒' },
 ];
 
 export default function AdminIlanlarPage() {

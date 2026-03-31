@@ -86,6 +86,7 @@ export const api = {
   updateAdminUser: (id: string, data: Record<string, unknown>) =>
     request('/admin/users', { method: 'PUT', body: JSON.stringify({ id, ...data }) }),
   getAdminStats: () => request('/admin/stats'),
+  getAdminEmanet: () => request('/admin/emanet'),
   updateSubscription: (userId: string, plan: string) =>
     request('/admin/subscriptions', { method: 'PUT', body: JSON.stringify({ userId, plan }) }),
 };
