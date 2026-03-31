@@ -104,10 +104,12 @@ export default function HostEarningsPage() {
 
   if (!user || user.role !== 'host') return null;
 
+  const cancelledBookings = bookings.filter((b) => b.status === 'cancelled');
   const activeBookings = bookings.filter((b) => b.status !== 'cancelled');
   const totalGross = activeBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
   const totalCommission = activeBookings.reduce((sum, b) => sum + (b.commissionAmount || b.totalPrice * 0.05), 0);
   const totalNet = activeBookings.reduce((sum, b) => sum + (b.hostEarnings || b.totalPrice * 0.95), 0);
+  const totalCancelled = cancelledBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
 
   const tableBookings = bookings.filter((b) => b.status === 'completed' || b.status === 'confirmed' || b.status === 'cancelled');
 
@@ -175,21 +177,26 @@ export default function HostEarningsPage() {
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <p className="text-sm text-gray-500 mb-1">Toplam Gelir (Brüt)</p>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalGross)}</p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Toplam Gelir (Brüt)</p>
+                <p className="text-xl font-bold text-gray-900">{formatCurrency(totalGross)}</p>
                 <p className="text-xs text-gray-400 mt-2">Komisyon öncesi toplam</p>
               </div>
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <p className="text-sm text-gray-500 mb-1">Toplam Komisyon (%5)</p>
-                <p className="text-2xl font-bold text-gold-500">{formatCurrency(totalCommission)}</p>
+              <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Toplam Komisyon (%5)</p>
+                <p className="text-xl font-bold text-gold-500">{formatCurrency(totalCommission)}</p>
                 <p className="text-xs text-gray-400 mt-2">Platform komisyonu</p>
               </div>
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <p className="text-sm text-gray-500 mb-1">Net Kazanç</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(totalNet)}</p>
-                <p className="text-xs text-gray-400 mt-2">Komisyon sonrası kazanç</p>
+              <div className="bg-red-50 rounded-xl shadow-sm p-5 border border-red-100">
+                <p className="text-xs text-red-500 mb-1">İptal Edilenler</p>
+                <p className="text-xl font-bold text-red-600">{formatCurrency(totalCancelled)}</p>
+                <p className="text-xs text-red-400 mt-2">{cancelledBookings.length} iptal rezervasyon</p>
+              </div>
+              <div className="bg-green-50 rounded-xl shadow-sm p-5 border border-green-100">
+                <p className="text-xs text-green-600 mb-1">Net Kazanç</p>
+                <p className="text-xl font-bold text-green-600">{formatCurrency(totalNet)}</p>
+                <p className="text-xs text-green-400 mt-2">Komisyon sonrası kazanç</p>
               </div>
             </div>
 
