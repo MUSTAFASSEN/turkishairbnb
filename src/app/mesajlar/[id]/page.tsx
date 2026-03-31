@@ -81,6 +81,12 @@ export default function ChatPage() {
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
 
+  // Mobilde navbar/footer gizle, tam ekran sohbet
+  useEffect(() => {
+    document.documentElement.classList.add('chat-mobile-fullscreen');
+    return () => document.documentElement.classList.remove('chat-mobile-fullscreen');
+  }, []);
+
   useEffect(() => {
     if (isLoading) return;
     if (!user) { router.push('/giris'); return; }
@@ -179,7 +185,7 @@ export default function ChatPage() {
 
   if (isLoading || loading) {
     return (
-      <div className="fixed left-0 right-0 bottom-0 flex items-center justify-center" style={{ top: '80px', ...chatBg }}>
+      <div className="fixed inset-0 lg:top-[80px] flex items-center justify-center" style={chatBg}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 border-4 border-gold-500 border-t-transparent mx-auto" />
           <p className="text-foggy text-sm mt-3">Yükleniyor...</p>
@@ -189,7 +195,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="fixed left-0 right-0 bottom-0 flex flex-col" style={{ top: '80px', ...chatBg }}>
+    <div className="fixed inset-0 lg:top-[80px] flex flex-col" style={chatBg}>
 
       {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3 shrink-0">

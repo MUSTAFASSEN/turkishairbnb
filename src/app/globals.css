@@ -33,3 +33,16 @@ html {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Mobile chat fullscreen — navbar & footer gizlenir, sayfa scroll kilitlenir */
+@media (max-width: 1023px) {
+  .chat-mobile-fullscreen {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+  .chat-mobile-fullscreen nav,
+  .chat-mobile-fullscreen footer {
+    display: none !important;
+  }
+}
