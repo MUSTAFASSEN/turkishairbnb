@@ -146,15 +146,14 @@ export async function PUT(request: NextRequest) {
   }
 
   const bookingUpdate: Record<string, unknown> = { status };
-  if (status === 'completed') bookingUpdate.paymentStatus = 'released';
+  // Sadece iptal durumunda ödeme iade edilir; tamamlandı durumunda ödemeyi sadece admin serbest bırakabilir
   if (status === 'cancelled') bookingUpdate.paymentStatus = 'refunded';
   await bookings.updateOne({ id }, { $set: bookingUpdate });
 
-  // Update payment status
-  const paymentStatus = status === 'completed' ? 'released' : status === 'cancelled' ? 'refunded' : undefined;
-  if (paymentStatus) {
+  // Ödeme kaydını sadece iptal durumunda güncelle; serbest bırakma işlemi admin emanet sayfasından yapılır
+  if (status === 'cancelled') {
     const payments = await paymentsCol();
-    await payments.updateOne({ bookingId: id }, { $set: { status: paymentStatus } });
+    await payments.updateOne({ bookingId: id }, { $set: { status: 'refunded' } });
   }
 
   const updated = await bookings.findOne({ id }, { projection: { _id: 0 } });
