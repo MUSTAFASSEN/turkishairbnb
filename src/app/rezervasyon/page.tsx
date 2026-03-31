@@ -122,6 +122,15 @@ function RezervasyonContent() {
             </div>
           </div>
 
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 text-left">
+            <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <p className="text-xs text-amber-700">
+              Giriş tarihinden en az <strong>12 saat önce</strong> iptal edilmediği takdirde ücret iadesi yapılmaz.
+            </p>
+          </div>
+
           <div className="flex flex-col gap-3">
             <button
               onClick={() => router.push('/profil')}
@@ -227,7 +236,20 @@ function RezervasyonContent() {
                 </div>
               </div>
 
-              <div className="mt-6 p-3 bg-gray-50 rounded-lg flex items-start gap-2">
+              {/* Cancellation Policy */}
+              <div className="mt-5 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+                <svg className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-amber-800 mb-1">İptal Politikası</p>
+                  <p className="text-xs text-amber-700 leading-relaxed">
+                    Rezervasyonunuz giriş tarihinden en az <strong>12 saat önce</strong> iptal edilebilir. Bu süreden sonra yapılan iptallerde ücret iadesi yapılmaz.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg flex items-start gap-2">
                 <svg className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
