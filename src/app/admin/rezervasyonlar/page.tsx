@@ -48,21 +48,6 @@ const statusLabels: Record<string, string> = {
   cancelled: 'Iptal Edildi',
 };
 
-const paymentStatusColors: Record<string, string> = {
-  held: 'bg-yellow-100 text-yellow-800',
-  pending: 'bg-yellow-100 text-yellow-800',
-  paid: 'bg-green-100 text-green-800',
-  released: 'bg-blue-100 text-blue-800',
-  refunded: 'bg-red-100 text-red-800',
-};
-
-const paymentStatusLabels: Record<string, string> = {
-  held: 'Emanette',
-  pending: 'Beklemede',
-  paid: 'Odendi',
-  released: 'Serbest Birakildi',
-  refunded: 'Iade Edildi',
-};
 
 export default function AdminRezervasyonlarPage() {
   const { user, isLoading: authLoading, loadFromStorage, logout } = useAuthStore();
@@ -70,8 +55,6 @@ export default function AdminRezervasyonlarPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     loadFromStorage();
@@ -95,40 +78,6 @@ export default function AdminRezervasyonlarPage() {
       console.error('Rezervasyonlar yuklenirken hata:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const updateStatus = async (bookingId: string, status: string) => {
-    try {
-      setActionLoading(bookingId + '-status');
-      await api.updateBooking(bookingId, status);
-      setBookings((prev) =>
-        prev.map((b) => (b.id === bookingId ? { ...b, status } : b))
-      );
-      setSuccessMsg(`Rezervasyon durumu "${statusLabels[status]}" olarak guncellendi`);
-      setTimeout(() => setSuccessMsg(''), 3000);
-    } catch (error) {
-      console.error('Durum guncellenirken hata:', error);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const releasePayment = async (bookingId: string) => {
-    try {
-      setActionLoading(bookingId + '-payment');
-      await api.processPayment({ bookingId, action: 'release' });
-      setBookings((prev) =>
-        prev.map((b) =>
-          b.id === bookingId ? { ...b, paymentStatus: 'released' } : b
-        )
-      );
-      setSuccessMsg('Odeme basariyla serbest birakildi');
-      setTimeout(() => setSuccessMsg(''), 3000);
-    } catch (error) {
-      console.error('Odeme islenirken hata:', error);
-    } finally {
-      setActionLoading(null);
     }
   };
 
@@ -199,12 +148,6 @@ export default function AdminRezervasyonlarPage() {
             <p className="text-gray-500 mt-1">Tum rezervasyonlari goruntuleyin ve yonetin</p>
           </div>
 
-          {successMsg && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
-              {successMsg}
-            </div>
-          )}
-
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold-500"></div>
@@ -215,33 +158,13 @@ export default function AdminRezervasyonlarPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Ilan
-                      </th>
-                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Misafir
-                      </th>
-                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Ev Sahibi
-                      </th>
-                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Tarihler
-                      </th>
-                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Fiyat
-                      </th>
-                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Komisyon
-                      </th>
-                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Durum
-                      </th>
-                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Odeme
-                      </th>
-                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Islemler
-                      </th>
+                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">İlan</th>
+                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Misafir</th>
+                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ev Sahibi</th>
+                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tarihler</th>
+                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Fiyat</th>
+                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Rezervasyon Durumu</th>
+                      <th className="text-left px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ev Sahibi Onayı</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -263,76 +186,28 @@ export default function AdminRezervasyonlarPage() {
                         <td className="px-4 py-4 text-sm font-medium text-gray-800">
                           {formatCurrency(booking.totalPrice)}
                         </td>
-                        <td className="px-4 py-4 text-sm text-gray-600">
-                          {formatCurrency(booking.commission || booking.totalPrice * 0.05)}
-                        </td>
                         <td className="px-4 py-4">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              statusColors[booking.status] || 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColors[booking.status] || 'bg-gray-100 text-gray-800'}`}>
                             {statusLabels[booking.status] || booking.status}
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              paymentStatusColors[booking.paymentStatus || 'pending'] || 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {paymentStatusLabels[booking.paymentStatus || 'pending'] || booking.paymentStatus}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="flex flex-col gap-1">
-                            {booking.status === 'pending' && (
-                              <button
-                                onClick={() => updateStatus(booking.id, 'confirmed')}
-                                disabled={actionLoading === booking.id + '-status'}
-                                className="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors disabled:opacity-50"
-                              >
-                                Onayla
-                              </button>
-                            )}
-                            {booking.status === 'confirmed' && (
-                              <button
-                                onClick={() => updateStatus(booking.id, 'completed')}
-                                disabled={actionLoading === booking.id + '-status'}
-                                className="text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-colors disabled:opacity-50"
-                              >
-                                Tamamla
-                              </button>
-                            )}
-                            {(booking.status === 'pending' || booking.status === 'confirmed') && (
-                              <button
-                                onClick={() => updateStatus(booking.id, 'cancelled')}
-                                disabled={actionLoading === booking.id + '-status'}
-                                className="text-xs bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors disabled:opacity-50"
-                              >
-                                Iptal Et
-                              </button>
-                            )}
-                            {booking.status === 'completed' &&
-                              booking.paymentStatus !== 'released' && (
-                                <button
-                                  onClick={() => releasePayment(booking.id)}
-                                  disabled={actionLoading === booking.id + '-payment'}
-                                  className="text-xs bg-gold-500 text-white px-3 py-1 rounded hover:bg-gold-600 transition-colors disabled:opacity-50"
-                                >
-                                  {actionLoading === booking.id + '-payment'
-                                    ? 'Isleniyor...'
-                                    : 'Odemeyi Serbest Birak'}
-                                </button>
-                              )}
-                          </div>
+                          {booking.status === 'pending' ? (
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Onay Bekleniyor</span>
+                          ) : booking.status === 'confirmed' ? (
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Onaylandı</span>
+                          ) : booking.status === 'completed' ? (
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Tamamlandı</span>
+                          ) : (
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">İptal Edildi</span>
+                          )}
                         </td>
                       </tr>
                     ))}
                     {bookings.length === 0 && (
                       <tr>
-                        <td colSpan={9} className="px-6 py-12 text-center text-slate-400">
-                          Henuz rezervasyon bulunmuyor
+                        <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                          Henüz rezervasyon bulunmuyor
                         </td>
                       </tr>
                     )}
