@@ -81,10 +81,22 @@ export default function ChatPage() {
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
 
-  // Mobilde navbar/footer gizle, tam ekran sohbet
+  // Klavye açılınca yüksekliği visualViewport ile ayarla (mobil)
   useEffect(() => {
-    document.documentElement.classList.add('chat-mobile-fullscreen');
-    return () => document.documentElement.classList.remove('chat-mobile-fullscreen');
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const handleResize = () => {
+      const el = document.getElementById('chat-root');
+      if (!el) return;
+      el.style.height = vv.height + 'px';
+      el.style.top = vv.offsetTop + 'px';
+    };
+    vv.addEventListener('resize', handleResize);
+    vv.addEventListener('scroll', handleResize);
+    return () => {
+      vv.removeEventListener('resize', handleResize);
+      vv.removeEventListener('scroll', handleResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -185,7 +197,7 @@ export default function ChatPage() {
 
   if (isLoading || loading) {
     return (
-      <div className="fixed inset-0 lg:top-[80px] flex items-center justify-center" style={chatBg}>
+      <div id="chat-root" className="fixed top-0 lg:top-20 left-0 right-0 bottom-0 z-[60] lg:z-10 flex items-center justify-center" style={chatBg}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 border-4 border-gold-500 border-t-transparent mx-auto" />
           <p className="text-foggy text-sm mt-3">Yükleniyor...</p>
@@ -195,7 +207,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="fixed inset-0 lg:top-[80px] flex flex-col" style={chatBg}>
+    <div id="chat-root" className="fixed top-0 lg:top-20 left-0 right-0 bottom-0 z-[60] lg:z-10 flex flex-col" style={chatBg}>
 
       {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3 shrink-0">
