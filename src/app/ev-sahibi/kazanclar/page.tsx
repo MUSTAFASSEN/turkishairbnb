@@ -53,6 +53,10 @@ const paymentStatusLabels: Record<string, string> = {
   refunded: 'İade Edildi',
 };
 
+const bookingStatusColors: Record<string, string> = {
+  cancelled: 'bg-red-100 text-red-700',
+};
+
 export default function HostEarningsPage() {
   const router = useRouter();
   const { user, isLoading: authLoading, loadFromStorage, logout } = useAuthStore();
@@ -100,11 +104,12 @@ export default function HostEarningsPage() {
 
   if (!user || user.role !== 'host') return null;
 
-  const totalGross = bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-  const totalCommission = bookings.reduce((sum, b) => sum + (b.commissionAmount || b.totalPrice * 0.05), 0);
-  const totalNet = bookings.reduce((sum, b) => sum + (b.hostEarnings || b.totalPrice * 0.95), 0);
+  const activeBookings = bookings.filter((b) => b.status !== 'cancelled');
+  const totalGross = activeBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+  const totalCommission = activeBookings.reduce((sum, b) => sum + (b.commissionAmount || b.totalPrice * 0.05), 0);
+  const totalNet = activeBookings.reduce((sum, b) => sum + (b.hostEarnings || b.totalPrice * 0.95), 0);
 
-  const completedBookings = bookings.filter((b) => b.status === 'completed' || b.status === 'confirmed');
+  const tableBookings = bookings.filter((b) => b.status === 'completed' || b.status === 'confirmed' || b.status === 'cancelled');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -301,7 +306,7 @@ export default function HostEarningsPage() {
             {/* Payment Status Per Booking */}
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Rezervasyon Bazlı Ödeme Durumu</h2>
-              {completedBookings.length > 0 ? (
+              {tableBookings.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
@@ -322,39 +327,46 @@ export default function HostEarningsPage() {
                           Net
                         </th>
                         <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
-                          Ödeme Durumu
+                          Durum
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {completedBookings.map((booking) => {
-                        const commission = booking.commissionAmount || booking.totalPrice * 0.05;
-                        const net = booking.hostEarnings || booking.totalPrice * 0.95;
+                      {tableBookings.map((booking) => {
+                        const isCancelled = booking.status === 'cancelled';
+                        const commission = isCancelled ? 0 : (booking.commissionAmount || booking.totalPrice * 0.05);
+                        const net = isCancelled ? 0 : (booking.hostEarnings || booking.totalPrice * 0.95);
                         return (
-                          <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="py-3 px-4 text-sm text-gray-900 truncate max-w-[200px]">
+                          <tr key={booking.id} className={`transition-colors ${isCancelled ? 'bg-red-50/40 hover:bg-red-50' : 'hover:bg-gray-50'}`}>
+                            <td className={`py-3 px-4 text-sm truncate max-w-[200px] ${isCancelled ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
                               {booking.listingTitle || booking.listingId}
                             </td>
-                            <td className="py-3 px-4 text-sm text-gray-600">
+                            <td className={`py-3 px-4 text-sm ${isCancelled ? 'text-gray-400' : 'text-gray-600'}`}>
                               {formatDate(booking.checkIn)}
                             </td>
-                            <td className="py-3 px-4 text-sm text-gray-700 text-right">
+                            <td className={`py-3 px-4 text-sm text-right ${isCancelled ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
                               {formatCurrency(booking.totalPrice)}
                             </td>
-                            <td className="py-3 px-4 text-sm text-gold-500 text-right">
-                              -{formatCurrency(commission)}
+                            <td className={`py-3 px-4 text-sm text-right ${isCancelled ? 'text-gray-400' : 'text-gold-500'}`}>
+                              {isCancelled ? '—' : `-${formatCurrency(commission)}`}
                             </td>
-                            <td className="py-3 px-4 text-sm font-semibold text-green-600 text-right">
-                              {formatCurrency(net)}
+                            <td className={`py-3 px-4 text-sm font-semibold text-right ${isCancelled ? 'text-red-400' : 'text-green-600'}`}>
+                              {isCancelled ? '₺0' : formatCurrency(net)}
                             </td>
                             <td className="py-3 px-4 text-center">
-                              <span
-                                className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${
-                                  paymentStatusColors[booking.paymentStatus] || 'bg-gray-100 text-gray-600'
-                                }`}
-                              >
-                                {paymentStatusLabels[booking.paymentStatus] || booking.paymentStatus}
-                              </span>
+                              {isCancelled ? (
+                                <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-red-100 text-red-700">
+                                  İptal Edildi
+                                </span>
+                              ) : (
+                                <span
+                                  className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${
+                                    paymentStatusColors[booking.paymentStatus] || 'bg-gray-100 text-gray-600'
+                                  }`}
+                                >
+                                  {paymentStatusLabels[booking.paymentStatus] || booking.paymentStatus}
+                                </span>
+                              )}
                             </td>
                           </tr>
                         );
