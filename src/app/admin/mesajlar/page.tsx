@@ -145,13 +145,13 @@ export default function AdminMesajlarPage() {
   const selectedConv = conversations.find(c => c.id === selectedId);
 
   if (authLoading) return (
-    <div className="flex items-center justify-center h-screen">
+    <div className="flex items-center justify-center" style={{ height: 'calc(100dvh - 80px)' }}>
       <div className="animate-spin rounded-full h-10 w-10 border-4 border-gold-500 border-t-transparent" />
     </div>
   );
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="fixed left-0 right-0 bottom-0 flex bg-gray-100" style={{ top: '80px' }}>
       {/* Mobile sidebar toggle */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -196,7 +196,7 @@ export default function AdminMesajlarPage() {
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main content */}
-      <div className="flex-1 flex overflow-hidden" style={{ height: '100vh' }}>
+      <div className="flex-1 flex overflow-hidden">
 
         {/* Conversation list */}
         <div className="w-80 bg-white border-r border-gray-100 flex flex-col shrink-0 shadow-sm">

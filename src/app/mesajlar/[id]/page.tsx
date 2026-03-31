@@ -179,7 +179,7 @@ export default function ChatPage() {
 
   if (isLoading || loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-80px)]" style={chatBg}>
+      <div className="fixed left-0 right-0 bottom-0 flex items-center justify-center" style={{ top: '80px', ...chatBg }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 border-4 border-gold-500 border-t-transparent mx-auto" />
           <p className="text-foggy text-sm mt-3">Yükleniyor...</p>
@@ -189,7 +189,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 80px)', ...chatBg }}>
+    <div className="fixed left-0 right-0 bottom-0 flex flex-col" style={{ top: '80px', ...chatBg }}>
 
       {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3 shrink-0">
